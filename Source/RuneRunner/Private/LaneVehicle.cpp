@@ -221,7 +221,6 @@ void ALaneVehicle::Tick(float DeltaTime)
 	GetWorld()->LineTraceSingleByChannel(Hit, TraceStart, TraceEnd, TraceChannelProperty, QueryParams);
 
 	DrawDebugLine(GetWorld(), TraceStart, TraceEnd, Hit.bBlockingHit ? FColor::Blue : FColor::Red, false, -1.0f, 0, 10.0f);
-	//UE_LOG(LogTemp, Log, TEXT("Tracing line: %s to %s"), *TraceStart.ToCompactString(), *TraceEnd.ToCompactString());
 
 	if (Hit.bBlockingHit && IsValid(Hit.GetActor()))
 	{
@@ -230,13 +229,9 @@ void ALaneVehicle::Tick(float DeltaTime)
 		{
 			CurrentlyOnTrackType = LaneUnderneath->GetTrackType();
 		}
-		//UE_LOG(LogTemp, Log, TEXT("Trace hit actor: %s"), *Hit.GetActor()->GetName());
-		//GEngine->AddOnScreenDebugMessage(24, 1.0f, FColor::Blue, FString::Printf(TEXT("Trace hit actor: %s"), *Hit.GetActor()->GetName()));
 	}
 	else
 	{
-		//GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Red, FString((TEXT("No actors found by trace"))));
-		//UE_LOG(LogTemp, Log, TEXT("No actors hit"));
 	}
 
 

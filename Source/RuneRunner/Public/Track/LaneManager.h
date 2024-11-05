@@ -70,7 +70,7 @@ protected:
 	void SpawnLaneSegment();
 
 	UFUNCTION()
-	void OnOverlapEnd(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+	void SpawnSingleLaneSegment(ABaseLaneSegment* PreviousSegmentRef);
 
 	UPROPERTY(VisibleAnywhere, Category = "Object Pool")
 	UObjectPoolComponent* ObjectPool_StandardLane;

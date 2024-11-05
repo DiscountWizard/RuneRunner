@@ -8,6 +8,7 @@
 
 class ALaneManager;
 class ABaseLaneSegment;
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FSpawnLaneSegmentDelegate, ABaseLaneSegment*, PreviousSegmentRef);
 
 UCLASS()
 class RUNERUNNER_API ARunnerLevelGM : public AGameModeBase
@@ -29,4 +30,6 @@ public:
 	void RegisterLaneManager(ALaneManager* InLaneManager);
 
 	ALaneManager* GetLaneManager();
+
+	FSpawnLaneSegmentDelegate SpawnLaneSegmentDelegate;
 };

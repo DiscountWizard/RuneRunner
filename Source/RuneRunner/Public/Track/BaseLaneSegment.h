@@ -5,10 +5,12 @@
 #include "CoreMinimal.h"
 #include "Components/PooledActor.h"
 #include "Track/LaneTypes.h"
+#include "GameModes/RunnerLevelGM.h"
 #include "BaseLaneSegment.generated.h"
 
 class UBoxComponent;
 class UArrowComponent;
+
 
 UCLASS()
 class RUNERUNNER_API ABaseLaneSegment : public APooledActor
@@ -26,6 +28,9 @@ public:
 	virtual void SetPoolActorInUse(bool NewValue) override;
 
 	void SetSpeed(float NewSpeed);
+	void SetLaneIndex(int32 NewIndex);
+	int32 GetLaneIndex();
+	void SetSpawnPoint(FVector SpawnPoint);
 	float GetSegmentLength() const;
 	FORCEINLINE ETrackType GetTrackType() { return LaneType; }
 
@@ -54,7 +59,14 @@ protected:
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "Lane Information")
 	UArrowComponent* BackAttachPoint;
 
-private:
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "Lane Information")
+	UArrowComponent* RootPoint;
 
+	FSpawnLaneSegmentDelegate SpawnLaneDelegate;
+
+	FVector StartingLocation;
+	bool SpawnedNewActor = false;
+	int32 LaneIndex;
+private:
 
 };

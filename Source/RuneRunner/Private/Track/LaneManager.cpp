@@ -13,11 +13,12 @@ ALaneManager::ALaneManager()
 	PrimaryActorTick.bCanEverTick = true;
 
 	SpawnCollisionBox = CreateDefaultSubobject<UBoxComponent>(FName("Spawn Collision Box"));
-	SpawnCollisionBox->SetBoxExtent(FVector(20.0f, 4000.f, 4000.f));
+	SpawnCollisionBox->SetBoxExtent(FVector(200.0f, 4000.f, 4000.f));
 	SpawnCollisionBox->bHiddenInGame = false;
-	SpawnCollisionBox->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
-	SpawnCollisionBox->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel2, ECollisionResponse::ECR_Block);
-	SpawnCollisionBox->OnComponentEndOverlap.AddDynamic(this, &ALaneManager::OnOverlapEnd);
+	SpawnCollisionBox->SetGenerateOverlapEvents(true);
+	SpawnCollisionBox->SetCollisionEnabled(ECollisionEnabled::QueryAndProbe);
+	SpawnCollisionBox->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel1, ECollisionResponse::ECR_Overlap);
+	//SpawnCollisionBox->OnComponentEndOverlap.AddDynamic(this, &ALaneManager::OnOverlapEnd);
 	SetRootComponent(SpawnCollisionBox);
 
 	// Lane Object Pools
@@ -67,23 +68,22 @@ void ALaneManager::BeginPlay()
 	auto GameModeRef = GetWorld()->GetAuthGameMode<ARunnerLevelGM>();
 	GameModeRef->RegisterLaneManager(this);
 
-	//FTimerDelegate TimerDelegate;
-	//FTimerHandle TimerHandle;
-
-	//TimerDelegate.BindUFunction(this, FName("SpawnLaneSegment"));
-	//GetWorld()->GetTimerManager().SetTimer(TimerHandle, TimerDelegate, LaneSpawnDelay, true);
+	GameModeRef->SpawnLaneSegmentDelegate.AddDynamic(this, &ALaneManager::SpawnSingleLaneSegment);
 
 	LastSpawnedSegmentPerLane.Empty();
-	//LastSpawnedSegmentPerLane.Init(nullptr, NumOfLanes);
 	for (int i = 0; i < NumOfLanes; i++)
 	{
 		LastSpawnedSegmentPerLane.Emplace(i, nullptr);
 	}
 
+	int i = 0;
 	for (FVector& SpawnPoint : LanePositions)
 	{
 		ABaseLaneSegment* NewSegment = Cast<ABaseLaneSegment>(ObjectPool_StandardLane->SpawnFromPool(FTransform(GetActorRotation(), SpawnPoint, FVector(1.0f, 1.0f, 1.0f))));
 		NewSegment->SetSpeed(LaneSpeed);
+		NewSegment->SetLaneIndex(i);
+		NewSegment->SetSpawnPoint(SpawnPoint);
+		i++;
 	}
 
 }
@@ -92,74 +92,74 @@ void ALaneManager::BeginPlay()
 
 void ALaneManager::SpawnLaneSegment()
 {
-	int currentLaneIndex = 0;
-	for (FVector& SpawnPoint : LanePositions)
-	{
-		ABaseLaneSegment* NewSegment = nullptr;
+	//int currentLaneIndex = 0;
+	//for (FVector& SpawnPoint : LanePositions)
+	//{
+	//	ABaseLaneSegment* NewSegment = nullptr;
 
-		if (ABaseLaneSegment* previousSegment = *LastSpawnedSegmentPerLane.Find(currentLaneIndex))
-		{
-			SpawnPoint.X = previousSegment->GetBackAttachPointLocationInWorldSpace().X - previousSegment->GetSegmentLength();
-		}
+	//	if (ABaseLaneSegment* previousSegment = *LastSpawnedSegmentPerLane.Find(currentLaneIndex))
+	//	{
+	//		SpawnPoint.X = previousSegment->GetBackAttachPointLocationInWorldSpace().X - (previousSegment->GetSegmentLength() * 2.0f);
+	//	}
 
-		switch (FMath::RandRange(0, 3))
-		{
-			case 0:
-				NewSegment = Cast<ABaseLaneSegment>(ObjectPool_StandardLane->SpawnFromPool(FTransform(GetActorRotation(), SpawnPoint, FVector(1.0f, 1.0f, 1.0f))));
-				break;
-			case 1:
-				NewSegment = Cast<ABaseLaneSegment>(ObjectPool_GapHazard->SpawnFromPool(FTransform(GetActorRotation(), SpawnPoint, FVector(1.0f, 1.0f, 1.0f))));
-				break;
-			case 2:
-				NewSegment = Cast<ABaseLaneSegment>(ObjectPool_RoughTerrainHazard->SpawnFromPool(FTransform(GetActorRotation(), SpawnPoint, FVector(1.0f, 1.0f, 1.0f))));
-				break;
-			case 3:
-				NewSegment = Cast<ABaseLaneSegment>(ObjectPool_WallHazard->SpawnFromPool(FTransform(GetActorRotation(), SpawnPoint, FVector(1.0f, 1.0f, 1.0f))));
-				break;
-			default:
-				break;
-		}
-		if (NewSegment)
-		{
-			LastSpawnedSegmentPerLane.Emplace(currentLaneIndex, NewSegment);
-			NewSegment->SetSpeed(LaneSpeed);
-		}
+	//	switch (FMath::RandRange(0, 3))
+	//	{
+	//		case 0:
+	//			NewSegment = Cast<ABaseLaneSegment>(ObjectPool_StandardLane->SpawnFromPool(FTransform(GetActorRotation(), SpawnPoint, FVector(1.0f, 1.0f, 1.0f))));
+	//			break;
+	//		case 1:
+	//			NewSegment = Cast<ABaseLaneSegment>(ObjectPool_GapHazard->SpawnFromPool(FTransform(GetActorRotation(), SpawnPoint, FVector(1.0f, 1.0f, 1.0f))));
+	//			break;
+	//		case 2:
+	//			NewSegment = Cast<ABaseLaneSegment>(ObjectPool_RoughTerrainHazard->SpawnFromPool(FTransform(GetActorRotation(), SpawnPoint, FVector(1.0f, 1.0f, 1.0f))));
+	//			break;
+	//		case 3:
+	//			NewSegment = Cast<ABaseLaneSegment>(ObjectPool_WallHazard->SpawnFromPool(FTransform(GetActorRotation(), SpawnPoint, FVector(1.0f, 1.0f, 1.0f))));
+	//			break;
+	//		default:
+	//			break;
+	//	}
+	//	if (NewSegment)
+	//	{
+	//		LastSpawnedSegmentPerLane.Emplace(currentLaneIndex, NewSegment);
+	//		NewSegment->SetSpeed(LaneSpeed);
+	//	}
 
-		currentLaneIndex++;
-	}
+	//	currentLaneIndex++;
+	//}
 }
 
-void ALaneManager::OnOverlapEnd(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+void ALaneManager::SpawnSingleLaneSegment(ABaseLaneSegment* PreviousSegmentRef)
 {
-	if (ABaseLaneSegment* ExitingSegment = Cast<ABaseLaneSegment>(OtherActor))
+	int32 SegmentLaneIndex = PreviousSegmentRef->GetLaneIndex();
+	UE_LOG(LogTemp, Log, TEXT("Event Calls: %i"), SegmentLaneIndex);
+	FVector SpawnPoint = PreviousSegmentRef->GetBackAttachPointLocationInWorldSpace();
+	SpawnPoint.X -= PreviousSegmentRef->GetSegmentLength();
+
+	ABaseLaneSegment* NewSegment = nullptr;
+	switch (FMath::RandRange(0, 3))
 	{
-		UE_LOG(LogTemp, Log, TEXT("Overlap End: %s"), *OtherActor->GetName());
-		ABaseLaneSegment* NewSegment = nullptr;
-		FVector SpawnPoint = ExitingSegment->GetBackAttachPointLocationInWorldSpace();
-		SpawnPoint.X -= ExitingSegment->GetSegmentLength();
+	case 0:
+		NewSegment = Cast<ABaseLaneSegment>(ObjectPool_StandardLane->SpawnFromPool(FTransform(GetActorRotation(), SpawnPoint, FVector(1.0f, 1.0f, 1.0f))));
+		break;
+	case 1:
+		NewSegment = Cast<ABaseLaneSegment>(ObjectPool_GapHazard->SpawnFromPool(FTransform(GetActorRotation(), SpawnPoint, FVector(1.0f, 1.0f, 1.0f))));
+		break;
+	case 2:
+		NewSegment = Cast<ABaseLaneSegment>(ObjectPool_RoughTerrainHazard->SpawnFromPool(FTransform(GetActorRotation(), SpawnPoint, FVector(1.0f, 1.0f, 1.0f))));
+		break;
+	case 3:
+		NewSegment = Cast<ABaseLaneSegment>(ObjectPool_WallHazard->SpawnFromPool(FTransform(GetActorRotation(), SpawnPoint, FVector(1.0f, 1.0f, 1.0f))));
+		break;
+	default:
+		break;
+	}
 
-		switch (FMath::RandRange(0, 3))
-		{
-		case 0:
-			NewSegment = Cast<ABaseLaneSegment>(ObjectPool_StandardLane->SpawnFromPool(FTransform(GetActorRotation(), SpawnPoint, FVector(1.0f, 1.0f, 1.0f))));
-			break;
-		case 1:
-			NewSegment = Cast<ABaseLaneSegment>(ObjectPool_GapHazard->SpawnFromPool(FTransform(GetActorRotation(), SpawnPoint, FVector(1.0f, 1.0f, 1.0f))));
-			break;
-		case 2:
-			NewSegment = Cast<ABaseLaneSegment>(ObjectPool_RoughTerrainHazard->SpawnFromPool(FTransform(GetActorRotation(), SpawnPoint, FVector(1.0f, 1.0f, 1.0f))));
-			break;
-		case 3:
-			NewSegment = Cast<ABaseLaneSegment>(ObjectPool_WallHazard->SpawnFromPool(FTransform(GetActorRotation(), SpawnPoint, FVector(1.0f, 1.0f, 1.0f))));
-			break;
-		default:
-			break;
-		}
-
-		if (NewSegment)
-		{
-			NewSegment->SetSpeed(LaneSpeed);
-		}
+	if (NewSegment)
+	{
+		NewSegment->SetSpeed(LaneSpeed);
+		NewSegment->SetLaneIndex(SegmentLaneIndex);
+		NewSegment->SetSpawnPoint(LanePositions[PreviousSegmentRef->GetLaneIndex()]);
 	}
 }
 
