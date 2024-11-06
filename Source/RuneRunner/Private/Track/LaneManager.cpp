@@ -12,15 +12,6 @@ ALaneManager::ALaneManager()
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
-	SpawnCollisionBox = CreateDefaultSubobject<UBoxComponent>(FName("Spawn Collision Box"));
-	SpawnCollisionBox->SetBoxExtent(FVector(200.0f, 4000.f, 4000.f));
-	SpawnCollisionBox->bHiddenInGame = false;
-	SpawnCollisionBox->SetGenerateOverlapEvents(true);
-	SpawnCollisionBox->SetCollisionEnabled(ECollisionEnabled::QueryAndProbe);
-	SpawnCollisionBox->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel1, ECollisionResponse::ECR_Overlap);
-	//SpawnCollisionBox->OnComponentEndOverlap.AddDynamic(this, &ALaneManager::OnOverlapEnd);
-	SetRootComponent(SpawnCollisionBox);
-
 	// Lane Object Pools
 	ObjectPool_StandardLane = CreateDefaultSubobject<UObjectPoolComponent>(FName("Standard Lane Object Pool"));
 	ObjectPool_StandardLane->PoolSize = 500;
@@ -56,7 +47,8 @@ void ALaneManager::OnConstruction(const FTransform& Transform)
 	if (StandardLaneSegment)
 	{
 		ABaseLaneSegment* StandardSegment = Cast<ABaseLaneSegment>(StandardLaneSegment->GetDefaultObject());
-		LaneSpawnDelay = StandardSegment->GetSegmentLength() / LaneSpeed;
+		StandardSegmentLength = StandardSegment->GetSegmentLength();
+		LaneSpawnDelay = StandardSegmentLength / LaneSpeed;
 		LaneSpawnDelay *= 2.0f;
 	}
 }
@@ -65,25 +57,39 @@ void ALaneManager::OnConstruction(const FTransform& Transform)
 void ALaneManager::BeginPlay()
 {
 	Super::BeginPlay();
+	ABaseLaneSegment* StandardSegment = Cast<ABaseLaneSegment>(StandardLaneSegment->GetDefaultObject());
+	StandardSegmentLength = StandardSegment->GetSegmentLength();
 	auto GameModeRef = GetWorld()->GetAuthGameMode<ARunnerLevelGM>();
 	GameModeRef->RegisterLaneManager(this);
 
-	GameModeRef->SpawnLaneSegmentDelegate.AddDynamic(this, &ALaneManager::SpawnSingleLaneSegment);
+	//GameModeRef->SpawnLaneSegmentDelegate.AddDynamic(this, &ALaneManager::SpawnSingleLaneSegment);
+	SegmentTrackIndexIncreasedDelegate = GameModeRef->SegmentTrackIndexIncreasedDelegate;
 
-	LastSpawnedSegmentPerLane.Empty();
-	for (int i = 0; i < NumOfLanes; i++)
-	{
-		LastSpawnedSegmentPerLane.Emplace(i, nullptr);
-	}
 
-	int i = 0;
-	for (FVector& SpawnPoint : LanePositions)
+	//ActiveSegments.SetNum(TrackLengthInSegments);
+	for (int s = 0; s < TrackLengthInSegments; s++)
 	{
-		ABaseLaneSegment* NewSegment = Cast<ABaseLaneSegment>(ObjectPool_StandardLane->SpawnFromPool(FTransform(GetActorRotation(), SpawnPoint, FVector(1.0f, 1.0f, 1.0f))));
-		NewSegment->SetSpeed(LaneSpeed);
-		NewSegment->SetLaneIndex(i);
-		NewSegment->SetSpawnPoint(SpawnPoint);
-		i++;
+		//ActiveSegments[s].SetNum(NumOfLanes);
+
+		FVector pacerLocation = GetActorLocation();
+		pacerLocation.X += StandardSegmentLength * s;
+		
+		TrackPacers.Add(pacerLocation);
+		
+		int i = 0;
+		for (FVector& SpawnPoint : LanePositions)
+		{
+			FVector AdjustedSpawnPoint = SpawnPoint;
+			AdjustedSpawnPoint.X = pacerLocation.X;
+			UE_LOG(LogTemp, Log, TEXT("Adjusted Spawn Point: %s"), *AdjustedSpawnPoint.ToString());
+			ABaseLaneSegment* NewSegment = Cast<ABaseLaneSegment>(ObjectPool_StandardLane->SpawnFromPool(FTransform(GetActorRotation(), AdjustedSpawnPoint, FVector(1.0f, 1.0f, 1.0f))));
+			NewSegment->SetLaneIndex(i);
+			NewSegment->SetTrackIndex(s);
+
+			//ActiveSegments[s][i] = NewSegment;
+			
+			i++;
+		}
 	}
 
 }
@@ -131,42 +137,101 @@ void ALaneManager::SpawnLaneSegment()
 
 void ALaneManager::SpawnSingleLaneSegment(ABaseLaneSegment* PreviousSegmentRef)
 {
-	int32 SegmentLaneIndex = PreviousSegmentRef->GetLaneIndex();
-	UE_LOG(LogTemp, Log, TEXT("Event Calls: %i"), SegmentLaneIndex);
-	FVector SpawnPoint = PreviousSegmentRef->GetBackAttachPointLocationInWorldSpace();
-	SpawnPoint.X -= PreviousSegmentRef->GetSegmentLength();
+	//int32 SegmentLaneIndex = PreviousSegmentRef->GetLaneIndex();
+	///*UE_LOG(LogTemp, Log, TEXT("Event Calls: %i"), SegmentLaneIndex);*/
+	//FVector SpawnPoint = PreviousSegmentRef->GetBackAttachPointLocationInWorldSpace();
+	//SpawnPoint.X -= PreviousSegmentRef->GetSegmentLength();
 
-	ABaseLaneSegment* NewSegment = nullptr;
-	switch (FMath::RandRange(0, 3))
-	{
-	case 0:
-		NewSegment = Cast<ABaseLaneSegment>(ObjectPool_StandardLane->SpawnFromPool(FTransform(GetActorRotation(), SpawnPoint, FVector(1.0f, 1.0f, 1.0f))));
-		break;
-	case 1:
-		NewSegment = Cast<ABaseLaneSegment>(ObjectPool_GapHazard->SpawnFromPool(FTransform(GetActorRotation(), SpawnPoint, FVector(1.0f, 1.0f, 1.0f))));
-		break;
-	case 2:
-		NewSegment = Cast<ABaseLaneSegment>(ObjectPool_RoughTerrainHazard->SpawnFromPool(FTransform(GetActorRotation(), SpawnPoint, FVector(1.0f, 1.0f, 1.0f))));
-		break;
-	case 3:
-		NewSegment = Cast<ABaseLaneSegment>(ObjectPool_WallHazard->SpawnFromPool(FTransform(GetActorRotation(), SpawnPoint, FVector(1.0f, 1.0f, 1.0f))));
-		break;
-	default:
-		break;
-	}
+	//ABaseLaneSegment* NewSegment = nullptr;
+	//switch (FMath::RandRange(0, 3))
+	//{
+	//case 0:
+	//	NewSegment = Cast<ABaseLaneSegment>(ObjectPool_StandardLane->SpawnFromPool(FTransform(GetActorRotation(), SpawnPoint, FVector(1.0f, 1.0f, 1.0f))));
+	//	break;
+	//case 1:
+	//	NewSegment = Cast<ABaseLaneSegment>(ObjectPool_GapHazard->SpawnFromPool(FTransform(GetActorRotation(), SpawnPoint, FVector(1.0f, 1.0f, 1.0f))));
+	//	break;
+	//case 2:
+	//	NewSegment = Cast<ABaseLaneSegment>(ObjectPool_RoughTerrainHazard->SpawnFromPool(FTransform(GetActorRotation(), SpawnPoint, FVector(1.0f, 1.0f, 1.0f))));
+	//	break;
+	//case 3:
+	//	NewSegment = Cast<ABaseLaneSegment>(ObjectPool_WallHazard->SpawnFromPool(FTransform(GetActorRotation(), SpawnPoint, FVector(1.0f, 1.0f, 1.0f))));
+	//	break;
+	//default:
+	//	break;
+	//}
 
-	if (NewSegment)
-	{
-		NewSegment->SetSpeed(LaneSpeed);
-		NewSegment->SetLaneIndex(SegmentLaneIndex);
-		NewSegment->SetSpawnPoint(LanePositions[PreviousSegmentRef->GetLaneIndex()]);
-	}
+	//if (NewSegment)
+	//{
+	//	NewSegment->SetSpeed(LaneSpeed);
+	//	NewSegment->SetLaneIndex(SegmentLaneIndex);
+	//	NewSegment->SetSpawnPoint(LanePositions[PreviousSegmentRef->GetLaneIndex()]);
+	//}
 }
 
 // Called every frame
 void ALaneManager::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	FVector ProposedNewPosition = TrackPacers[0];
+	ProposedNewPosition.X += LaneSpeed * DeltaTime;
+	float DistanceTraveled = FVector::Distance(ProposedNewPosition, GetActorLocation());
+	
+	if (DistanceTraveled >= StandardSegmentLength)
+	{
+		for (int s = 0; s < TrackLengthInSegments; s++)
+		{
+			FVector pacerLocation = GetActorLocation();
+			pacerLocation.X += (StandardSegmentLength * s) + (DistanceTraveled - StandardSegmentLength);
+			TrackPacers[s] = pacerLocation;
+		}
+
+		int i = 0;
+		for (FVector& SpawnPoint : LanePositions)
+		{
+			FVector AdjustedSpawnPoint = SpawnPoint;
+			AdjustedSpawnPoint.X = TrackPacers[0].X;
+			ABaseLaneSegment* NewSegment = nullptr;
+			switch (FMath::RandRange(0, 3))
+			{
+			case 0:
+				NewSegment = Cast<ABaseLaneSegment>(ObjectPool_StandardLane->SpawnFromPool(FTransform(GetActorRotation(), AdjustedSpawnPoint, FVector(1.0f, 1.0f, 1.0f))));
+				break;
+			case 1:
+				NewSegment = Cast<ABaseLaneSegment>(ObjectPool_GapHazard->SpawnFromPool(FTransform(GetActorRotation(), AdjustedSpawnPoint, FVector(1.0f, 1.0f, 1.0f))));
+				break;
+			case 2:
+				NewSegment = Cast<ABaseLaneSegment>(ObjectPool_RoughTerrainHazard->SpawnFromPool(FTransform(GetActorRotation(), AdjustedSpawnPoint, FVector(1.0f, 1.0f, 1.0f))));
+				break;
+			case 3:
+				NewSegment = Cast<ABaseLaneSegment>(ObjectPool_WallHazard->SpawnFromPool(FTransform(GetActorRotation(), AdjustedSpawnPoint, FVector(1.0f, 1.0f, 1.0f))));
+				break;
+			default:
+				break;
+			}
+			//ABaseLaneSegment* NewSegment = Cast<ABaseLaneSegment>(ObjectPool_StandardLane->SpawnFromPool(FTransform(GetActorRotation(), AdjustedSpawnPoint, FVector(1.0f, 1.0f, 1.0f))));
+			NewSegment->SetLaneIndex(i);
+			NewSegment->SetTrackIndex(0);
+			
+			i++;
+		}
+
+		UE_LOG(LogTemp, Log, TEXT("Broadcasting Delegate"));
+		SegmentTrackIndexIncreasedDelegate.Broadcast();
+	}
+	else {
+		for (FVector& pacePoint : TrackPacers)
+		{
+			pacePoint.X += LaneSpeed * DeltaTime;
+
+		}
+	}
+
+	for (FVector& pacePoint : TrackPacers)
+	{
+		DrawDebugSphere(GetWorld(), pacePoint, 100.0f, 32, FColor::Red);       
+	}
 }
 
 void ALaneManager::SetLaneSpeed(float NewSpeed)

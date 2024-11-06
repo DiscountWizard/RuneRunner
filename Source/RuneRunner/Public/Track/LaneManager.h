@@ -6,6 +6,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "Components/ObjectPoolComponent.h"
+#include "GameModes/RunnerLevelGM.h"
 #include "LaneManager.generated.h"
 
 class ABaseLaneSegment;
@@ -31,6 +32,9 @@ public:
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Camera")
 	AActor* StaticCamera;
+
+	UPROPERTY(VisibleAnywhere, Category = "Lane Information")
+	TArray<FVector> TrackPacers;
 	
 
 protected:
@@ -38,9 +42,6 @@ protected:
 	virtual void BeginPlay() override;
 
 	virtual void OnConstruction(const FTransform& Transform) override;
-
-	UPROPERTY(VisibleAnywhere, Category = "Spawn Config")
-	UBoxComponent* SpawnCollisionBox;
 
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Lane Segments")
 	TArray<FVector> LanePositions;
@@ -50,6 +51,9 @@ protected:
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Lane Configuration")
 	int NumOfLanes = 1;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Lane Configuration")
+	int TrackLengthInSegments = 1;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Lane Configuration")
 	double DistanceBetweenLaneSpawns = 100;
@@ -95,9 +99,10 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Lane Configuration")
 	float LaneSpeed = 10.0f;
 
-	
-
 	float ElapsedTimeSinceSegmentSpawn = 0.f;
+
+	float StandardSegmentLength;
 	
+	FSegmentTrackIndexIncreased SegmentTrackIndexIncreasedDelegate;
 
 };

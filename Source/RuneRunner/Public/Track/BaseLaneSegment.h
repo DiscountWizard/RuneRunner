@@ -10,6 +10,7 @@
 
 class UBoxComponent;
 class UArrowComponent;
+class ALaneManager;
 
 
 UCLASS()
@@ -27,8 +28,13 @@ public:
 
 	virtual void SetPoolActorInUse(bool NewValue) override;
 
+	void MoveLane(FVector MoveAmount);
 	void SetSpeed(float NewSpeed);
 	void SetLaneIndex(int32 NewIndex);
+	void SetTrackIndex(int32 NewIndex);
+
+	UFUNCTION()
+	void IncreaseTrackIndex();
 	int32 GetLaneIndex();
 	void SetSpawnPoint(FVector SpawnPoint);
 	float GetSegmentLength() const;
@@ -62,11 +68,14 @@ protected:
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "Lane Information")
 	UArrowComponent* RootPoint;
 
-	FSpawnLaneSegmentDelegate SpawnLaneDelegate;
+	//FSpawnLaneSegmentDelegate SpawnLaneDelegate;
 
 	FVector StartingLocation;
 	bool SpawnedNewActor = false;
 	int32 LaneIndex;
+	int32 TrackIndex;
 private:
+
+	ALaneManager* LaneManagerRef;
 
 };

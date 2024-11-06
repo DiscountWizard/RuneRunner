@@ -3,6 +3,7 @@
 #include "Track/BaseLaneSegment.h"
 #include "Components/ArrowComponent.h"
 #include "Components/BoxComponent.h"
+#include "Track/LaneManager.h"
 #include "GameModes/RunnerLevelGM.h"
 
 // Sets default values
@@ -33,13 +34,18 @@ void ABaseLaneSegment::BeginPlay()
 {
 	Super::BeginPlay();
 	
+	auto GameModeRef = GetWorld()->GetAuthGameMode<ARunnerLevelGM>();
+	GameModeRef->SegmentTrackIndexIncreasedDelegate.AddDynamic(this, &ABaseLaneSegment::IncreaseTrackIndex);
+	LaneManagerRef = GameModeRef->LaneManager;
+	UE_LOG(LogTemp, Log, TEXT("Delegate Should be set"));
 }
 
 void ABaseLaneSegment::OnConstruction(const FTransform& Transform)
 {
-	SegmentCollisionBox->SetBoxExtent(FVector(SegmentLength, SegmentWidth, 1.0f));
+	// "Extent" is length from center.
+	SegmentCollisionBox->SetBoxExtent(FVector(SegmentLength / 2.0f, SegmentWidth / 2.0f, 1.0f));
 
-	BackAttachPoint->SetRelativeLocation(FVector(-SegmentLength, 0.0f, 0.0f));
+	BackAttachPoint->SetRelativeLocation(FVector(-SegmentLength / 2.0f, 0.0f, 0.0f));
 
 }
 
@@ -48,14 +54,32 @@ void ABaseLaneSegment::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	double DistanceFromStart = FVector::Distance(GetActorLocation(), StartingLocation);
-	UE_LOG(LogTemp, Log, TEXT("Lane Index: %i, Distance From Origin: %f"), LaneIndex, DistanceFromStart);
-	if (!SpawnedNewActor && DistanceFromStart > SegmentLength * 2.0f)
+	if (InUse)
 	{
-		SpawnLaneDelegate.Broadcast(this);
-		SpawnedNewActor = true;
+		if (LaneManagerRef)
+		{
+			if (TrackIndex >= LaneManagerRef->TrackPacers.Num())
+			{
+				SetPoolActorInUse(false);
+			}
+			else 
+			{
+				FVector PaceLoc = LaneManagerRef->TrackPacers[TrackIndex];
+				PaceLoc.Y = GetActorLocation().Y;
+				SetActorLocation(PaceLoc);
+				//DrawDebugString(GetWorld(), GetActorLocation(), FString::Printf(TEXT("%s"), *PaceLoc.ToString()), nullptr, FColor::Black, 0.f, false, 1.0f);
+			}
+		}
 	}
-	AddActorWorldOffset(FVector(SegmentSpeed * DeltaTime, 0.f, 0.f), true);
+
+	//double DistanceFromStart = FVector::Distance(GetActorLocation(), StartingLocation);
+	//UE_LOG(LogTemp, Log, TEXT("Lane Index: %i, Distance From Origin: %f"), LaneIndex, DistanceFromStart);
+	//if (!SpawnedNewActor && DistanceFromStart > SegmentLength * 2.0f)
+	//{
+	//	SpawnLaneDelegate.Broadcast(this);
+	//	SpawnedNewActor = true;
+	//}
+	//AddActorWorldOffset(FVector(SegmentSpeed * DeltaTime, 0.f, 0.f), true);
 
 }
 
@@ -66,14 +90,22 @@ void ABaseLaneSegment::SetPoolActorInUse(bool NewValue)
 	// Put logic that would normally go in BeginPlay() here. 
 	if (NewValue)
 	{
-		//StartingLocation = GetActorLocation();
 		auto GameModeRef = GetWorld()->GetAuthGameMode<ARunnerLevelGM>();
+		GameModeRef->SegmentTrackIndexIncreasedDelegate.AddDynamic(this, &ABaseLaneSegment::IncreaseTrackIndex);
+		LaneManagerRef = GameModeRef->LaneManager;
+		//StartingLocation = GetActorLocation();
+		/*auto GameModeRef = GetWorld()->GetAuthGameMode<ARunnerLevelGM>();
 		SpawnLaneDelegate = GameModeRef->SpawnLaneSegmentDelegate;
-		SpawnedNewActor = false;
+		SpawnedNewActor = false;*/
 	}
 	else {
 
 	}
+}
+
+void ABaseLaneSegment::MoveLane(FVector MoveAmount)
+{
+	AddActorWorldOffset(MoveAmount);
 }
 
 void ABaseLaneSegment::SetSpeed(float NewSpeed)
@@ -84,6 +116,19 @@ void ABaseLaneSegment::SetSpeed(float NewSpeed)
 void ABaseLaneSegment::SetLaneIndex(int32 NewIndex)
 {
 	LaneIndex = NewIndex;
+}
+
+
+
+void ABaseLaneSegment::SetTrackIndex(int32 NewIndex)
+{
+	TrackIndex = NewIndex;
+}
+
+void ABaseLaneSegment::IncreaseTrackIndex()
+{
+	//UE_LOG(LogTemp, Log, TEXT("Increased Track Index"));
+	TrackIndex++;
 }
 
 int32 ABaseLaneSegment::GetLaneIndex()
