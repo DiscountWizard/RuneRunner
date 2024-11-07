@@ -248,11 +248,6 @@ void ALaneManager::Tick(float DeltaTime)
 
 		}
 	}
-
-	for (FVector& pacePoint : TrackPacers)
-	{
-		DrawDebugSphere(GetWorld(), pacePoint, 100.0f, 32, FColor::Red);       
-	}
 }
 
 void ALaneManager::SetLaneSpeed(float NewSpeed)

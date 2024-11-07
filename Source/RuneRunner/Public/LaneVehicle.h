@@ -40,7 +40,13 @@ public:
 	void JumpEnded();
 
 	UFUNCTION(BlueprintImplementableEvent)
+	void JumpEvent();
+
+	UFUNCTION(BlueprintImplementableEvent)
 	void LaneChanged(FVector NewVehicleLocation);
+
+	UFUNCTION(BlueprintCallable)
+	void LaneChangeComplete();
 
 
 protected:
@@ -58,8 +64,10 @@ protected:
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Collision")
 	ETrackType CurrentlyOnTrackType = ETrackType::ETT_Standard;
 
+	void MoveDirection(int LaneChangeDir);
+
 	UFUNCTION()
-	void MoveToLane(int NewLaneIndex);
+	bool MoveToLane(int NewLaneIndex);
 
 	UFUNCTION()
 	void VehicleJump();
@@ -67,28 +75,6 @@ protected:
 	UFUNCTION()
 	void RotateVehicleToSide(int IndexChange);
 
-	// Timeline Stuff
-	UPROPERTY()
-	UTimelineComponent* MoveLaneTimeline;
-
-	UPROPERTY()
-	UTimelineComponent* JumpTimeline;
-
-	UPROPERTY()
-	UCurveFloat* FloatCurve_LaneChange;
-
-	UPROPERTY()
-	UCurveFloat* FloatCurve_Jump;
-
-	UFUNCTION()
-	void TimelineCallback(float val);
-
-	UFUNCTION()
-	void TimelineFinishedCallback();
-
-	UPROPERTY()
-	TEnumAsByte<ETimelineDirection::Type> TimelineDirection;
-	
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Vehicle Information")
 	EVehicleState CurrentVehicleState = EVehicleState::EVS_NotActive;
 	
@@ -101,6 +87,18 @@ protected:
 	int VehicleHealth = 5;
 	bool LaneEffectApplied = false;
 	FGuid LaneSegmentIdentifier;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Vehicle Information")
+	float LaneChangeTime = 0.5f;
+
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Vehicle Information")
+	EVehicleInputState VehicleInputState = EVehicleInputState::EVIS_Available;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Vehicle Information")
+	float JumpHangTime = 1.0f;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Vehicle Information")
+	float JumpHeight = 100.0f;
 private:
 
 	ARunnerLevelGM* GameModeRef;
@@ -108,7 +106,7 @@ private:
 	int MaximumLanes = 1;
 	FVector TargetLocation;
 
-	float JumpHangTime = 0.0f;
+	
 
 	
 	

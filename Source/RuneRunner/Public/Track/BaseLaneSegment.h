@@ -40,8 +40,6 @@ public:
 	float GetSegmentLength() const;
 	FORCEINLINE ETrackType GetTrackType() { return LaneType; }
 
-	FVector GetBackAttachPointLocationInWorldSpace();
-
 	bool BlockPlayerMovement = false;
 	
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "Lane Segment Config")
@@ -63,10 +61,6 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "Lane Segment Config")
 	float SegmentWidth = 50.0f;
-
-
-	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "Lane Information")
-	UArrowComponent* BackAttachPoint;
 
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "Lane Information")
 	UArrowComponent* RootPoint;

@@ -36,8 +36,13 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Input")
 	UInputAction* JumpAction;
 
+	
 	void MoveLeft(const FInputActionValue& Value);
 	void MoveRight(const FInputActionValue& Value);
 	void Jump(const FInputActionValue& Value);
+
+	
+
+private:
 
 };

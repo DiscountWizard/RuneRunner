@@ -46,26 +46,12 @@ void APlayerVehicle::Tick(float DeltaTime)
 
 void APlayerVehicle::MoveLeft(const FInputActionValue& Value)
 {
-	if (CurrentVehicleState == EVehicleState::EVS_InLane)
-	{
-		MoveToLane(LaneIndex - 1);
-	}
-	else if (CurrentVehicleState == EVehicleState::EVS_Jumping)
-	{
-		RotateVehicleToSide(1);
-	}
+	MoveDirection(-1);
 }
 
 void APlayerVehicle::MoveRight(const FInputActionValue& Value)
 {
-	if (CurrentVehicleState == EVehicleState::EVS_InLane)
-	{
-		MoveToLane(LaneIndex + 1);
-	}
-	else if (CurrentVehicleState == EVehicleState::EVS_Jumping)
-	{
-		RotateVehicleToSide(-1);
-	}
+	MoveDirection(1);
 }
 
 void APlayerVehicle::Jump(const FInputActionValue& Value)

@@ -24,10 +24,6 @@ ABaseLaneSegment::ABaseLaneSegment()
 	SegmentCollisionBox->SetCollisionEnabled(ECollisionEnabled::QueryAndProbe);
 	SegmentCollisionBox->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel1, ECollisionResponse::ECR_Overlap);*/
 
-	BackAttachPoint = CreateDefaultSubobject<UArrowComponent>(TEXT("Back Attach Arrow"));
-	BackAttachPoint->SetupAttachment(GetRootComponent(), FName(TEXT("Back Attach Point")));
-	BackAttachPoint->SetHiddenInGame(false);
-	BackAttachPoint->SetVisibility(true);
 }
 
 // Called when the game starts or when spawned
@@ -45,9 +41,6 @@ void ABaseLaneSegment::OnConstruction(const FTransform& Transform)
 {
 	// "Extent" is length from center.
 	SegmentCollisionBox->SetBoxExtent(FVector(SegmentLength / 2.0f, SegmentWidth / 2.0f, 1.0f));
-
-	BackAttachPoint->SetRelativeLocation(FVector(-SegmentLength / 2.0f, 0.0f, 0.0f));
-
 }
 
 // Called every frame
@@ -146,9 +139,3 @@ float ABaseLaneSegment::GetSegmentLength() const
 {
 	return SegmentLength;
 }
-
-FVector ABaseLaneSegment::GetBackAttachPointLocationInWorldSpace()
-{
-	return BackAttachPoint->GetComponentLocation();
-}
-
