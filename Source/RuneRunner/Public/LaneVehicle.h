@@ -36,6 +36,9 @@ public:
 	UFUNCTION(BlueprintImplementableEvent)
 	void JumpStateChanged();
 
+	UFUNCTION(BlueprintCallable)
+	void JumpEnded();
+
 	UFUNCTION(BlueprintImplementableEvent)
 	void LaneChanged(FVector NewVehicleLocation);
 
@@ -94,6 +97,10 @@ protected:
 
 	ALaneManager* LaneManagerRef;
 	int VehicleSidesMax = 4;
+
+	int VehicleHealth = 5;
+	bool LaneEffectApplied = false;
+	FGuid LaneSegmentIdentifier;
 private:
 
 	ARunnerLevelGM* GameModeRef;

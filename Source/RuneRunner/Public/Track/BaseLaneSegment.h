@@ -42,6 +42,11 @@ public:
 
 	FVector GetBackAttachPointLocationInWorldSpace();
 
+	bool BlockPlayerMovement = false;
+	
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "Lane Segment Config")
+	ETrackType LaneType = ETrackType::ETT_Standard;
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -59,8 +64,6 @@ protected:
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "Lane Segment Config")
 	float SegmentWidth = 50.0f;
 
-	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "Lane Segment Config")
-	ETrackType LaneType = ETrackType::ETT_Standard;
 
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "Lane Information")
 	UArrowComponent* BackAttachPoint;
@@ -72,7 +75,11 @@ protected:
 
 	FVector StartingLocation;
 	bool SpawnedNewActor = false;
+	
+	UPROPERTY(VisibleAnywhere, Category = "Lane Information")
 	int32 LaneIndex;
+
+	UPROPERTY(VisibleAnywhere, Category = "Lane Information")
 	int32 TrackIndex;
 private:
 

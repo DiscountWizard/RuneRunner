@@ -46,9 +46,6 @@ protected:
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Lane Segments")
 	TArray<FVector> LanePositions;
 
-	TMap<int8, ABaseLaneSegment*> LastSpawnedSegmentPerLane;
-	//TArray<ABaseLaneSegment*> LastSpawnedSegmentPerLane;
-
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Lane Configuration")
 	int NumOfLanes = 1;
 
@@ -98,6 +95,11 @@ private:
 
 	UPROPERTY(EditAnywhere, Category = "Lane Configuration")
 	float LaneSpeed = 10.0f;
+
+	UPROPERTY(EditAnywhere, Category = "Lane Configuration")
+	int SegmentsBetweenObstacleSpawns = 10;
+
+	int SegmentsSinceLastSpawn = 0;
 
 	float ElapsedTimeSinceSegmentSpawn = 0.f;
 

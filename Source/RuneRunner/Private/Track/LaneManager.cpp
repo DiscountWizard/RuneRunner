@@ -11,6 +11,7 @@ ALaneManager::ALaneManager()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.TickGroup = TG_PrePhysics;
 
 	// Lane Object Pools
 	ObjectPool_StandardLane = CreateDefaultSubobject<UObjectPoolComponent>(FName("Standard Lane Object Pool"));
@@ -193,30 +194,50 @@ void ALaneManager::Tick(float DeltaTime)
 			FVector AdjustedSpawnPoint = SpawnPoint;
 			AdjustedSpawnPoint.X = TrackPacers[0].X;
 			ABaseLaneSegment* NewSegment = nullptr;
-			switch (FMath::RandRange(0, 3))
+			if (SegmentsSinceLastSpawn > SegmentsBetweenObstacleSpawns)
 			{
-			case 0:
+				switch (FMath::RandRange(1, 3))
+				{
+				case 0:
+					NewSegment = Cast<ABaseLaneSegment>(ObjectPool_StandardLane->SpawnFromPool(FTransform(GetActorRotation(), AdjustedSpawnPoint, FVector(1.0f, 1.0f, 1.0f))));
+					break;
+				case 1:
+					NewSegment = Cast<ABaseLaneSegment>(ObjectPool_GapHazard->SpawnFromPool(FTransform(GetActorRotation(), AdjustedSpawnPoint, FVector(1.0f, 1.0f, 1.0f))));
+					break;
+				case 2:
+					NewSegment = Cast<ABaseLaneSegment>(ObjectPool_RoughTerrainHazard->SpawnFromPool(FTransform(GetActorRotation(), AdjustedSpawnPoint, FVector(1.0f, 1.0f, 1.0f))));
+					break;
+				case 3:
+					NewSegment = Cast<ABaseLaneSegment>(ObjectPool_WallHazard->SpawnFromPool(FTransform(GetActorRotation(), AdjustedSpawnPoint, FVector(1.0f, 1.0f, 1.0f))));
+					break;
+				default:
+					break;
+				}
+			}
+			else {
 				NewSegment = Cast<ABaseLaneSegment>(ObjectPool_StandardLane->SpawnFromPool(FTransform(GetActorRotation(), AdjustedSpawnPoint, FVector(1.0f, 1.0f, 1.0f))));
-				break;
-			case 1:
-				NewSegment = Cast<ABaseLaneSegment>(ObjectPool_GapHazard->SpawnFromPool(FTransform(GetActorRotation(), AdjustedSpawnPoint, FVector(1.0f, 1.0f, 1.0f))));
-				break;
-			case 2:
-				NewSegment = Cast<ABaseLaneSegment>(ObjectPool_RoughTerrainHazard->SpawnFromPool(FTransform(GetActorRotation(), AdjustedSpawnPoint, FVector(1.0f, 1.0f, 1.0f))));
-				break;
-			case 3:
-				NewSegment = Cast<ABaseLaneSegment>(ObjectPool_WallHazard->SpawnFromPool(FTransform(GetActorRotation(), AdjustedSpawnPoint, FVector(1.0f, 1.0f, 1.0f))));
-				break;
-			default:
-				break;
 			}
 			//ABaseLaneSegment* NewSegment = Cast<ABaseLaneSegment>(ObjectPool_StandardLane->SpawnFromPool(FTransform(GetActorRotation(), AdjustedSpawnPoint, FVector(1.0f, 1.0f, 1.0f))));
+			
+			if (SegmentsSinceLastSpawn == SegmentsBetweenObstacleSpawns)
+			{
+				NewSegment->LaneType = ETrackType::ETT_PreHazard;
+				//NewSegment->BlockPlayerMovement = true;
+			}
 			NewSegment->SetLaneIndex(i);
 			NewSegment->SetTrackIndex(0);
 			
 			i++;
 		}
 
+		if (SegmentsSinceLastSpawn > SegmentsBetweenObstacleSpawns)
+		{
+			SegmentsSinceLastSpawn = 0;
+		}
+		else {
+			SegmentsSinceLastSpawn++;
+		}
+		
 		UE_LOG(LogTemp, Log, TEXT("Broadcasting Delegate"));
 		SegmentTrackIndexIncreasedDelegate.Broadcast();
 	}

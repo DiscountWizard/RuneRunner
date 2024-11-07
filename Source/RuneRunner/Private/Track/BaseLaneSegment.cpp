@@ -11,6 +11,7 @@ ABaseLaneSegment::ABaseLaneSegment()
 {
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.TickGroup = TG_StartPhysics;
 
 	RootPoint = CreateDefaultSubobject<UArrowComponent>(TEXT("Root Arrow"));
 	SetRootComponent(RootPoint);

@@ -31,6 +31,11 @@ ALaneVehicle::ALaneVehicle()
 	FloatCurve_Jump = Curve2.Object;
 }
 
+void ALaneVehicle::JumpEnded()
+{
+	CurrentVehicleState = EVehicleState::EVS_InLane;
+}
+
 // Called when the game starts or when spawned
 void ALaneVehicle::BeginPlay()
 {
@@ -73,35 +78,37 @@ void ALaneVehicle::BeginPlay()
 
 		// Jump Timeline
 
-		JumpTimeline = NewObject<UTimelineComponent>(this, FName("Jump Timeline"));
-		JumpTimeline->CreationMethod = EComponentCreationMethod::UserConstructionScript;
-		this->BlueprintCreatedComponents.Add(JumpTimeline);
+		//JumpTimeline = NewObject<UTimelineComponent>(this, FName("Jump Timeline"));
+		//JumpTimeline->CreationMethod = EComponentCreationMethod::UserConstructionScript;
+		//this->BlueprintCreatedComponents.Add(JumpTimeline);
 
-		JumpTimeline->SetNetAddressable();    // This component has a stable name that can be referenced for replication
+		//JumpTimeline->SetNetAddressable();    // This component has a stable name that can be referenced for replication
 
-		JumpTimeline->SetPropertySetObject(this); // Set which object the timeline should drive properties on
-		JumpTimeline->SetDirectionPropertyName(FName("TimelineDirection"));
+		//JumpTimeline->SetPropertySetObject(this); // Set which object the timeline should drive properties on
+		//JumpTimeline->SetDirectionPropertyName(FName("TimelineDirection"));
 
-		JumpTimeline->SetLooping(false);
-		JumpTimeline->SetTimelineLength(1.0f);
-		JumpTimeline->SetPlayRate(1.0f);
-		JumpTimeline->SetTimelineLengthMode(ETimelineLengthMode::TL_LastKeyFrame);
+		//JumpTimeline->SetLooping(false);
+		//JumpTimeline->SetTimelineLength(1.0f);
+		//JumpTimeline->SetPlayRate(1.0f);
+		//JumpTimeline->SetTimelineLengthMode(ETimelineLengthMode::TL_LastKeyFrame);
 
-		JumpTimeline->SetPlaybackPosition(0.0f, false);
+		//JumpTimeline->SetPlaybackPosition(0.0f, false);
 
-		//Add the float curve to the timeline and connect it to your timelines's interpolation function
-		onTimelineCallback.BindUFunction(this, FName{ TEXT("TimelineCallback") });
-		onTimelineFinishedCallback.BindUFunction(this, FName{ TEXT("TimelineFinishedCallback") });
-		JumpTimeline->AddInterpFloat(FloatCurve_Jump, onTimelineCallback);
-		JumpTimeline->SetTimelineFinishedFunc(onTimelineFinishedCallback);
+		////Add the float curve to the timeline and connect it to your timelines's interpolation function
+		//onTimelineCallback.BindUFunction(this, FName{ TEXT("TimelineCallback") });
+		//onTimelineFinishedCallback.BindUFunction(this, FName{ TEXT("TimelineFinishedCallback") });
+		//JumpTimeline->AddInterpFloat(FloatCurve_Jump, onTimelineCallback);
+		//JumpTimeline->SetTimelineFinishedFunc(onTimelineFinishedCallback);
 
-		JumpTimeline->RegisterComponent();
+		//JumpTimeline->RegisterComponent();
 	}
 }
 
 void ALaneVehicle::MoveToLane(int NewLaneIndex)
 {
-	if (FMath::IsWithin(NewLaneIndex, 0, MaximumLanes) && (CurrentVehicleState == EVehicleState::EVS_InLane || CurrentVehicleState == EVehicleState::EVS_NotActive ))
+	if (FMath::IsWithin(NewLaneIndex, 0, MaximumLanes) && 
+		(CurrentVehicleState == EVehicleState::EVS_InLane || CurrentVehicleState == EVehicleState::EVS_NotActive ) &&
+		CurrentlyOnTrackType != ETrackType::ETT_PreHazard)
 	{
 
 		CurrentVehicleState = EVehicleState::EVS_ChangingLane;
@@ -124,10 +131,11 @@ void ALaneVehicle::MoveToLane(int NewLaneIndex)
 
 void ALaneVehicle::VehicleJump()
 {
+	//GEngine->AddOnScreenDebugMessage(-1, 10.0f, FColor::White, FString::Printf(TEXT("Jumping")));
 	if (CurrentVehicleState == EVehicleState::EVS_InLane)
 	{
 		CurrentVehicleState = EVehicleState::EVS_Jumping;
-		JumpHangTime = 0.0f;
+		//JumpHangTime = 0.0f;
 		JumpStateChanged();
 		//OldLocation = GetActorLocation();
 		//TargetLocation = OldLocation + FVector(0.0f, 0.0f, 500.0f);
@@ -191,17 +199,17 @@ void ALaneVehicle::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if (CurrentVehicleState == EVehicleState::EVS_Jumping)
-	{
-		JumpHangTime += DeltaTime;
+	//if (CurrentVehicleState == EVehicleState::EVS_Jumping)
+	//{
+	//	JumpHangTime += DeltaTime;
 
-		if (JumpHangTime >= 1.0f)
-		{
-			CurrentVehicleState = EVehicleState::EVS_InLane;
-			JumpHangTime = 0.0f;
-			JumpStateChanged();
-		}
-	}
+	//	if (JumpHangTime >= 1.0f)
+	//	{
+	//		CurrentVehicleState = EVehicleState::EVS_InLane;
+	//		JumpHangTime = 0.0f;
+	//		JumpStateChanged();
+	//	}
+	//}
 
 
 
@@ -225,15 +233,44 @@ void ALaneVehicle::Tick(float DeltaTime)
 	if (Hit.bBlockingHit && IsValid(Hit.GetActor()))
 	{
 		ABaseLaneSegment* LaneUnderneath = Cast<ABaseLaneSegment>(Hit.GetActor());
+
 		if (LaneUnderneath)
 		{
-			CurrentlyOnTrackType = LaneUnderneath->GetTrackType();
+			if (LaneSegmentIdentifier.IsValid())
+			{
+				if (LaneSegmentIdentifier != LaneUnderneath->GetActorGuid())
+				{
+					LaneSegmentIdentifier = LaneUnderneath->GetActorGuid();
+					LaneEffectApplied = false;
+					CurrentlyOnTrackType = LaneUnderneath->GetTrackType();
+					GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::White, FString(TEXT("New Segment")));
+				}
+			}
+			else {
+				LaneSegmentIdentifier = LaneUnderneath->GetActorGuid();
+			}
 		}
 	}
 	else
 	{
 	}
 
+	if (!LaneEffectApplied)
+	{
+		switch (CurrentlyOnTrackType)
+		{
+			case ETrackType::ETT_Gap:
+			case ETrackType::ETT_Wall:
+			case ETrackType::ETT_Rough:
+				VehicleHealth--;
+				break;
+			default:
+				break;
+		}
+		LaneEffectApplied = true;
+	}
+
+	DrawDebugString(GetWorld(), GetActorLocation(), FString::Printf(TEXT("%i"), VehicleHealth), nullptr, FColor::Red, 0.0f, false, 1.0f);
 
 }
 
